@@ -1,2 +1,3 @@
 flask
 clickhouse-connect
+flask-limiter
