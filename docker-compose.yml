@@ -1,0 +1,49 @@
+services:
+
+  clickhouse:
+    image: clickhouse/clickhouse-server:latest
+    container_name: clickhouse
+    ports:
+      - "8123:8123"
+      - "9000:9000"
+    ulimits:
+      nofile:
+        soft: 262144
+        hard: 262144
+    deploy:
+      resources:
+        limits:
+          cpus: "1"
+          memory: 1g
+
+  ingestion:
+    build:
+      context: ./ingestion
+    container_name: ct_ingestor
+    depends_on:
+      - clickhouse
+    restart: unless-stopped
+    deploy:
+      resources:
+        limits:
+          cpus: "1"
+          memory: 1g
+
+  api:
+    build:
+      context: ./api
+    container_name: ct_api
+    environment:
+      - CLICKHOUSE_HOST=clickhouse
+      - CLICKHOUSE_DB=ct
+    ports:
+      - "5000:5000"
+    depends_on:
+      - clickhouse
+    restart: unless-stopped
+    deploy:
+      resources:
+        limits:
+          cpus: "1"
+          memory: 1g
+          
