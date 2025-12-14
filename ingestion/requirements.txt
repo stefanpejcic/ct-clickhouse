@@ -1,0 +1,4 @@
+clickhouse-connect
+cryptography
+requests
+publicsuffix2
