@@ -7,8 +7,20 @@ Auto-discovers CT logs, stores them in a ClickHouse database and optionally expo
 
 ```bash
 git clone https://github.com/stefanpejcic/ct-clickhouse
-cd ct-clickhouse && docker compose up --build
+cd ct-clickhouse
 ```
+
+without api:
+```bash
+docker compose up --build
+```
+
+with api:
+```bash
+docker compose --profile api up --build
+```
+
+
 
 ## API
 
