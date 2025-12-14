@@ -32,9 +32,12 @@ services:
   api:
     build: ./api
     container_name: ct_api
+    profiles: ["api"]              # API is off by default
     environment:
       CLICKHOUSE_HOST: clickhouse
       CLICKHOUSE_DB: ct
+      RATE_LIMIT_ENABLED: "false"  # off by default
+      RATE_LIMIT: "100/minute"     # default limit if enabled
     ports:
       - "5000:5000"
     depends_on:
@@ -45,6 +48,4 @@ services:
         limits:
           cpus: "1"
           memory: 1g
-    profiles:
-      - api
-      
+          
