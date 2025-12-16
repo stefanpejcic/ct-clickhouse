@@ -18,7 +18,7 @@ if RATE_LIMIT_ENABLED:
     )
 
 ch = clickhouse_connect.get_client(
-    host=os.getenv("CLICKHOUSE_HOST", "localhost"),
+    host=os.getenv("CLICKHOUSE_HOST", "clickhouse"),
     database=os.getenv("CLICKHOUSE_DB", "ct"),
 )
 
