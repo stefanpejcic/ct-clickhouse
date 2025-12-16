@@ -92,24 +92,37 @@ def fetch_entries(log_url, start, end):
 
 
 def parse_cert(leaf_input: bytes):
-    cert_len = int.from_bytes(leaf_input[10:13], "big")
-    cert_der = leaf_input[13 : 13 + cert_len]
-    cert = x509.load_der_x509_certificate(cert_der, default_backend())
-
-    domains = set()
-    for attr in cert.subject:
-        if attr.oid._name == "commonName":
-            domains.add(attr.value.lower())
-
     try:
-        san = cert.extensions.get_extension_for_class(x509.SubjectAlternativeName)
-        for d in san.value.get_values_for_type(x509.DNSName):
-            domains.add(d.lower())
-    except Exception:
-        pass
+        # Leaf type (first byte)
+        leaf_type = leaf_input[0]
+        if leaf_type != 0:  # 0 = timestamped entry, 1 = precert
+            log.debug(f"Skipping non-certificate leaf (type={leaf_type})")
+            return None, [], None
 
-    fingerprint = hashlib.sha256(cert_der).hexdigest()
-    return cert, list(domains), fingerprint
+        # TimestampedEntry structure: skip 12 bytes header (1 type + 8 timestamp + 3 algo)
+        offset = 12
+        cert_len = int.from_bytes(leaf_input[offset:offset+3], "big")
+        cert_der = leaf_input[offset+3 : offset+3+cert_len]
+        cert = x509.load_der_x509_certificate(cert_der, default_backend())
+
+        domains = set()
+        for attr in cert.subject:
+            if attr.oid._name == "commonName":
+                domains.add(attr.value.lower())
+
+        try:
+            san = cert.extensions.get_extension_for_class(x509.SubjectAlternativeName)
+            for d in san.value.get_values_for_type(x509.DNSName):
+                domains.add(d.lower())
+        except Exception:
+            pass
+
+        fingerprint = hashlib.sha256(cert_der).hexdigest()
+        return cert, list(domains), fingerprint
+
+    except Exception as e:
+        log.debug(f"Failed to parse leaf: {e}, leaf len={len(leaf_input)}")
+        return None, [], None
 
 
 def base_domain(d):
