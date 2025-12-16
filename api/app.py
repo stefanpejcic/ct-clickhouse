@@ -1,6 +1,7 @@
 from flask import Flask, jsonify, Response, stream_with_context
 import clickhouse_connect
 import os
+import time
 
 RATE_LIMIT_ENABLED = os.getenv("RATE_LIMIT_ENABLED", "false").lower() == "true"
 RATE_LIMIT = os.getenv("RATE_LIMIT", "100/minute")
