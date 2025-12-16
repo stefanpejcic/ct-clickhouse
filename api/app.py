@@ -1,4 +1,4 @@
-from flask import Flask, jsonify
+from flask import Flask, jsonify, url_for
 import clickhouse_connect
 import os
 
@@ -23,6 +23,23 @@ ch = clickhouse_connect.get_client(
     username=os.getenv("CLICKHOUSE_USER", "default"),
     password=os.getenv("CLICKHOUSE_PASSWORD", "mysecretpassword")
 )
+
+
+
+
+
+@app.route("/")
+def index():
+    endpoints = []
+    for rule in app.url_map.iter_rules():
+        if "GET" in rule.methods and not rule.rule.startswith("/static"):
+            endpoints.append({
+                "endpoint": rule.endpoint,
+                "url": rule.rule,
+                "methods": list(rule.methods)
+            })
+    return jsonify(endpoints)
+
 
 @app.route("/domain/<name>")
 def domain(name):
