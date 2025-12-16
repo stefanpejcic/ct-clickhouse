@@ -8,6 +8,39 @@ RATE_LIMIT = os.getenv("RATE_LIMIT", "100/minute")
 
 app = Flask(__name__)
 
+IPS_FILE = "ips.txt"
+allowed_ips = None
+
+def load_allowed_ips():
+    global allowed_ips
+    if os.path.exists(IPS_FILE):
+        with open(IPS_FILE, "r") as f:
+            allowed_ips = {
+                line.strip()
+                for line in f
+                if line.strip() and not line.startswith("#")
+            }
+    else:
+        allowed_ips = None
+
+
+load_allowed_ips()
+
+@app.before_request
+def restrict_by_ip():
+    if allowed_ips is None:
+        return
+
+    client_ip = request.headers.get("X-Forwarded-For", request.remote_addr)
+
+    if client_ip and "," in client_ip:
+        client_ip = client_ip.split(",")[0].strip()
+
+    if client_ip not in allowed_ips:
+        return jsonify({"error": "Access denied"}), 403
+
+
+
 if RATE_LIMIT_ENABLED:
     from flask_limiter import Limiter
     from flask_limiter.util import get_remote_address
