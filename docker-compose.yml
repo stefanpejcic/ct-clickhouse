@@ -11,6 +11,7 @@ services:
       CLICKHOUSE_DB: ct
     volumes:
       - ./clickhouse/init.sql:/docker-entrypoint-initdb.d/init.sql
+      - /var/lib/clickhouse:/var/lib/clickhouse
     ulimits:
       nofile:
         soft: 262144
