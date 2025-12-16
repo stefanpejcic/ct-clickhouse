@@ -48,7 +48,15 @@ def domain(name):
         "SELECT * FROM cert_domains WHERE domain=%(d)s ORDER BY ts DESC LIMIT 100",
         parameters={"d": name},
     )
-    return jsonify(r.result_rows)
+
+    def decode_row(row):
+        return [
+            col.decode() if isinstance(col, bytes) else col
+            for col in row
+        ]
+
+    decoded_rows = [decode_row(row) for row in r.result_rows]
+    return jsonify(decoded_rows)
 
 @app.route("/subdomains/<base>")
 def subdomains(base):
