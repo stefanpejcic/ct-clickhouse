@@ -1,10 +1,16 @@
+version: "3.9"
+
 services:
   clickhouse:
     image: clickhouse/clickhouse-server:latest
     container_name: clickhouse
     ports:
-      - "8123:8123"
-      - "9000:9000"
+      - "8123:8123"  # HTTP interface
+      - "9000:9000"  # Native TCP interface
+    environment:
+      CLICKHOUSE_USER: default
+      CLICKHOUSE_PASSWORD: mysecretpassword
+      CLICKHOUSE_DB: ct
     volumes:
       - ./clickhouse/init.sql:/docker-entrypoint-initdb.d/init.sql
     ulimits:
@@ -23,6 +29,11 @@ services:
     depends_on:
       - clickhouse
     restart: unless-stopped
+    environment:
+      CLICKHOUSE_HOST: clickhouse
+      CLICKHOUSE_DB: ct
+      CLICKHOUSE_USER: default
+      CLICKHOUSE_PASSWORD: mysecretpassword
     deploy:
       resources:
         limits:
@@ -32,12 +43,14 @@ services:
   api:
     build: ./api
     container_name: ct_api
-    profiles: ["api"]              # API is off by default
+    profiles: ["api"]  # API is off by default
     environment:
       CLICKHOUSE_HOST: clickhouse
       CLICKHOUSE_DB: ct
-      RATE_LIMIT_ENABLED: "false"  # off by default
-      RATE_LIMIT: "100/minute"     # default limit if enabled
+      CLICKHOUSE_USER: default
+      CLICKHOUSE_PASSWORD: mysecretpassword
+      RATE_LIMIT_ENABLED: "false"
+      RATE_LIMIT: "100/minute"
     ports:
       - "5000:5000"
     depends_on:
@@ -48,4 +61,3 @@ services:
         limits:
           cpus: "1"
           memory: 1g
-          
