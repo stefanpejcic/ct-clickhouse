@@ -1,4 +1,4 @@
-from flask import Flask, jsonify, url_for
+from flask import Flask, jsonify, Response, stream_with_context
 import clickhouse_connect
 import os
 
@@ -69,6 +69,33 @@ def recent(base):
         parameters={"b": base},
     )
     return jsonify(r.result_rows)
+
+
+
+last_ts = None
+
+@app.route("/stream")
+def stream():
+    def event_stream():
+        global last_ts
+        while True:
+            query = "SELECT * FROM cert_domains "
+            if last_ts:
+                query += f"WHERE ts > '{last_ts}' "
+            query += "ORDER BY ts ASC LIMIT 100"
+
+            result = ch.query(query)
+            rows = result.result_rows
+
+            if rows:
+                for row in rows:
+                    yield f"data: {row}\n\n"
+                last_ts = rows[-1][result.column_names.index("ts")]
+
+            time.sleep(2)
+
+    return Response(stream_with_context(event_stream()), mimetype="text/event-stream")
+
 
 if __name__ == "__main__":
     app.run(host="0.0.0.0", port=5000)
