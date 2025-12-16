@@ -167,9 +167,11 @@ def log_worker(lg):
 
             for i, e in enumerate(entries):
                 leaf = base64.b64decode(e["leaf_input"])
-                try:
-                    cert, domains, fp = parse_cert(leaf)
-                except Exception:
+                cert, domains, fp = parse_cert(leaf)
+                if cert is None:
+                    continue
+                if not domains:
+                    log.debug(f"No domains found for cert {fp}")
                     continue
 
                 for d in domains:
