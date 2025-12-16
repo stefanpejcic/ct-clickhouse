@@ -54,6 +54,8 @@ services:
       - "5000:5000"
     depends_on:
       - clickhouse
+    #volumes: # restrict access to ips, place ips in file and uncomment this
+    #  - ./api/ips.txt:/app/ips.txt
     restart: unless-stopped
     deploy:
       resources:
