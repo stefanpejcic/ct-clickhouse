@@ -172,9 +172,9 @@ def stats():
 
     query = f"""
         SELECT
-            count() AS total_rows,
-            countDistinct(domain) AS unique_domains,
-            countDistinct(base_domain) AS unique_base_domains,
+            count() AS total,
+            countDistinct(domain) AS subdomains,
+            countDistinct(base_domain) AS domains,
             min(ts) AS first_seen,
             max(ts) AS last_seen
         FROM cert_domains
