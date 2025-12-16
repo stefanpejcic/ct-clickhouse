@@ -1,4 +1,4 @@
-from flask import Flask, jsonify, Response, stream_with_context
+from flask import Flask, jsonify, Response, stream_with_context, request
 import clickhouse_connect
 import os
 import time
