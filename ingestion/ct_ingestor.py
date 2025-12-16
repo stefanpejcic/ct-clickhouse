@@ -143,6 +143,8 @@ def log_worker(lg):
         host=CLICKHOUSE_HOST,
         port=CLICKHOUSE_PORT,
         database=CLICKHOUSE_DB,
+        username=os.getenv("CLICKHOUSE_USER", "default"),
+        password=os.getenv("CLICKHOUSE_PASSWORD", "mysecretpassword"),
     )
 
     log.info(f"Worker started for {name} ({lg['state']})")
