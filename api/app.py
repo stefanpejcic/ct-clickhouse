@@ -2,6 +2,7 @@ from flask import Flask, jsonify, Response, stream_with_context, request
 import clickhouse_connect
 import os
 import time
+from datetime import datetime
 
 RATE_LIMIT_ENABLED = os.getenv("RATE_LIMIT_ENABLED", "false").lower() == "true"
 RATE_LIMIT = os.getenv("RATE_LIMIT", "100/minute")
@@ -150,6 +151,51 @@ def tld(tld):
 
     decoded_rows = [decode_row(row) for row in r.result_rows]
     return jsonify(decoded_rows)
+
+
+
+
+@app.route("/stats")
+def stats():
+    date_str = request.args.get("date")
+
+    if date_str:
+        try:
+            target_date = datetime.strptime(date_str, "%Y-%m-%d").date()
+            where_clause = "toDate(ts) = %(d)s"
+            params = {"d": target_date}
+        except ValueError:
+            return jsonify({"error": "Invalid date format. Use YYYY-MM-DD"}), 400
+    else:
+        where_clause = "toDate(ts) = today()"
+        params = {}
+
+    query = f"""
+        SELECT
+            count() AS total_rows,
+            countDistinct(domain) AS unique_domains,
+            countDistinct(base_domain) AS unique_base_domains,
+            min(ts) AS first_seen,
+            max(ts) AS last_seen
+        FROM cert_domains
+        WHERE {where_clause}
+    """
+
+    r = ch.query(query, parameters=params)
+
+    if not r.result_rows:
+        return jsonify({})
+
+    row = r.result_rows[0]
+    data = dict(zip(r.column_names, row))
+
+    for k, v in data.items():
+        if isinstance(v, bytes):
+            data[k] = v.decode()
+
+    data["date"] = date_str or "today"
+
+    return jsonify(data)
 
 
 
