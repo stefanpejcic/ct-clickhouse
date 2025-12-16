@@ -95,6 +95,8 @@ def parse_cert(leaf_input: bytes):
     try:
         # Leaf type (first byte)
         leaf_type = leaf_input[0]
+        if leaf_type not in (0, 1):  # 0 = cert, 1 = precert
+            return None, [], None
         if leaf_type != 0:  # 0 = timestamped entry, 1 = precert
             log.debug(f"Skipping non-certificate leaf (type={leaf_type})")
             return None, [], None
@@ -103,7 +105,11 @@ def parse_cert(leaf_input: bytes):
         offset = 12
         cert_len = int.from_bytes(leaf_input[offset:offset+3], "big")
         cert_der = leaf_input[offset+3 : offset+3+cert_len]
-        cert = x509.load_der_x509_certificate(cert_der, default_backend())
+      try:
+          cert = x509.load_der_x509_certificate(cert_der, default_backend())
+      except Exception as e:
+          log.debug(f"Skipping invalid DER cert: {e}, len={len(cert_der)}")
+          return None, [], None
 
         domains = set()
         for attr in cert.subject:
