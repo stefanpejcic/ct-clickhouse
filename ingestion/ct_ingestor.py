@@ -105,11 +105,11 @@ def parse_cert(leaf_input: bytes):
         offset = 12
         cert_len = int.from_bytes(leaf_input[offset:offset+3], "big")
         cert_der = leaf_input[offset+3 : offset+3+cert_len]
-      try:
-          cert = x509.load_der_x509_certificate(cert_der, default_backend())
-      except Exception as e:
-          log.debug(f"Skipping invalid DER cert: {e}, len={len(cert_der)}")
-          return None, [], None
+        try:
+            cert = x509.load_der_x509_certificate(cert_der, default_backend())
+        except Exception as e:
+            log.debug(f"Skipping invalid DER cert: {e}, len={len(cert_der)}")
+            return None, [], None
 
         domains = set()
         for attr in cert.subject:
