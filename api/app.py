@@ -81,6 +81,45 @@ def recent(base):
 
 
 
+# /tld/rs?limit=500
+@app.route("/tld/<tld>")
+def tld(tld):
+    # Default + max limits
+    DEFAULT_LIMIT = 100
+    MAX_LIMIT = 1000
+
+    try:
+        limit = int(request.args.get("limit", DEFAULT_LIMIT))
+    except ValueError:
+        limit = DEFAULT_LIMIT
+
+    limit = max(1, min(limit, MAX_LIMIT))
+
+    tld = tld.lower().lstrip(".")
+    pattern = f"%.{tld}"
+
+    query = f"""
+        SELECT domain, max(ts) AS last_seen
+        FROM cert_domains
+        WHERE domain LIKE %(pattern)s
+        GROUP BY domain
+        ORDER BY last_seen DESC
+        LIMIT {limit}
+    """
+
+    r = ch.query(query, parameters={"pattern": pattern})
+
+    def decode_row(row):
+        return [
+            col.decode() if isinstance(col, bytes) else col
+            for col in row
+        ]
+
+    decoded_rows = [decode_row(row) for row in r.result_rows]
+    return jsonify(decoded_rows)
+
+
+
 last_ts = None
 
 @app.route("/stream")
@@ -104,6 +143,10 @@ def stream():
             time.sleep(2)
 
     return Response(stream_with_context(event_stream()), mimetype="text/event-stream")
+
+
+
+
 
 
 if __name__ == "__main__":
