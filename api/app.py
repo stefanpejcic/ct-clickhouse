@@ -4,8 +4,18 @@ import os
 import time
 from datetime import datetime
 
+
+# ---------------- CONFIG ----------------
+
 RATE_LIMIT_ENABLED = os.getenv("RATE_LIMIT_ENABLED", "false").lower() == "true"
 RATE_LIMIT = os.getenv("RATE_LIMIT", "100/minute")
+
+CLICKHOUSE_HOST = os.getenv("CLICKHOUSE_HOST", "clickhouse")
+CLICKHOUSE_PORT = int(os.getenv("CLICKHOUSE_PORT", 8123))
+CLICKHOUSE_DB = os.getenv("CLICKHOUSE_DB", "ct")
+CLICKHOUSE_USER = os.getenv("CLICKHOUSE_USER", "defaultuser")
+CLICKHOUSE_PASSWORD = os.getenv("CLICKHOUSE_PASSWORD", "defaultpassword")
+
 
 app = Flask(__name__)
 
@@ -53,14 +63,12 @@ if RATE_LIMIT_ENABLED:
     )
 
 ch = clickhouse_connect.get_client(
-    host=os.getenv("CLICKHOUSE_HOST", "clickhouse"),
-    database=os.getenv("CLICKHOUSE_DB", "ct"),
-    username=os.getenv("CLICKHOUSE_USER", "defaultuser"),
-    password=os.getenv("CLICKHOUSE_PASSWORD", "defaultpassword")
+    host=CLICKHOUSE_HOST,
+    port=CLICKHOUSE_PORT,
+    database=CLICKHOUSE_DB,
+    username=CLICKHOUSE_USER,
+    password=CLICKHOUSE_PASSWORD,
 )
-
-
-
 
 
 @app.route("/")
