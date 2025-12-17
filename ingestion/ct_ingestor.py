@@ -200,6 +200,7 @@ def log_worker(lg):
                     continue
 
                 for d in domains:
+                    log.info(f"[{name}] {d}")
                     rows.append([
                         datetime.utcnow(),
                         d,
@@ -234,7 +235,6 @@ def log_worker(lg):
 
                 metrics["domains"] += len(rows)
                 metrics["certs"] += len(set(r[3] for r in rows))
-                log.info(f"[{name}] domains={metrics['domains']} certs={metrics['certs']}")
 
             idx = end + 1
             open(offset_file, "w").write(str(idx))
