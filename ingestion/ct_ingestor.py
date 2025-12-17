@@ -19,6 +19,7 @@ from cryptography.hazmat.backends import default_backend
 from publicsuffix2 import PublicSuffixList
 
 # ---------------- CONFIG ----------------
+
 LOG_LIST_URL = "https://www.gstatic.com/ct/log_list/v3/log_list.json"
 POLL_INTERVAL = 5
 BATCH_SIZE = 512
@@ -29,6 +30,7 @@ CLICKHOUSE_PORT = 8123
 CLICKHOUSE_DB = "ct"
 CLICKHOUSE_TABLE = "cert_domains"
 VERBOSE = True
+
 # ---------------------------------------
 
 os.makedirs(OFFSET_DIR, exist_ok=True)
@@ -40,11 +42,22 @@ logging.basicConfig(
 )
 log = logging.getLogger("ct")
 
+
 # ---------------- DISCOVERY ----------------
+
+LOG_LIST_CACHE = "log_list.json"
+CACHE_TTL = 24 * 60 * 60  # daily
+
 def discover_logs():
-    r = requests.get(LOG_LIST_URL, timeout=20)
-    r.raise_for_status()
-    data = r.json()
+    if os.path.exists(LOG_LIST_CACHE):
+        mtime = os.path.getmtime(LOG_LIST_CACHE)
+        if time.time() - mtime < CACHE_TTL:
+            with open(LOG_LIST_CACHE, "r") as f:
+                data = json.load(f)
+        else:
+            data = fetch_and_cache_log_list()
+    else:
+        data = fetch_and_cache_log_list()
 
     logs = []
     now = datetime.now(timezone.utc)
@@ -70,6 +83,16 @@ def discover_logs():
             })
 
     return logs
+
+
+def fetch_and_cache_log_list():
+    r = requests.get(LOG_LIST_URL, timeout=20)
+    r.raise_for_status()
+    data = r.json()
+    with open(LOG_LIST_CACHE, "w") as f:
+        json.dump(data, f)
+    log.info(f"Updated CT log list from {LOG_LIST_URL}")
+    return data
 
 # ---------------- CT HELPERS ----------------
 
@@ -221,6 +244,7 @@ def log_worker(lg):
 
 
 # ---------------- MAIN ----------------
+
 def main():
     log.info("Starting CT ingestion (horizontal scaling enabled)")
 
