@@ -10,7 +10,7 @@ import logging
 import os
 import time
 from datetime import datetime, timezone
-from typing import List
+from multiprocessing import Process
 
 import requests
 import clickhouse_connect
@@ -25,13 +25,15 @@ POLL_INTERVAL = 5
 BATCH_SIZE = 512
 OFFSET_DIR = "offsets"
 
-CLICKHOUSE_HOST = "clickhouse"
-CLICKHOUSE_PORT = 8123
-CLICKHOUSE_DB = "ct"
-CLICKHOUSE_TABLE = "cert_domains"
-VERBOSE = True
+USE_CLICKHOUSE = os.getenv("USE_CLICKHOUSE", "false").lower() in ("1", "true", "yes")
+CLICKHOUSE_HOST = os.getenv("CLICKHOUSE_HOST", "clickhouse")
+CLICKHOUSE_PORT = int(os.getenv("CLICKHOUSE_PORT", 8123))
+CLICKHOUSE_DB = os.getenv("CLICKHOUSE_DB", "ct")
+CLICKHOUSE_TABLE = os.getenv("CLICKHOUSE_TABLE", "cert_domains")
+CLICKHOUSE_USER = os.getenv("CLICKHOUSE_USER", "defaultuser")
+CLICKHOUSE_PASSWORD = os.getenv("CLICKHOUSE_PASSWORD", "defaultpassword")
 
-# ---------------------------------------
+VERBOSE = True
 
 os.makedirs(OFFSET_DIR, exist_ok=True)
 psl = PublicSuffixList()
@@ -42,11 +44,21 @@ logging.basicConfig(
 )
 log = logging.getLogger("ct")
 
-
-# ---------------- DISCOVERY ----------------
+# ---------------- LOG DISCOVERY ----------------
 
 LOG_LIST_CACHE = "log_list.json"
 CACHE_TTL = 24 * 60 * 60  # daily
+
+
+def fetch_and_cache_log_list():
+    r = requests.get(LOG_LIST_URL, timeout=20)
+    r.raise_for_status()
+    data = r.json()
+    with open(LOG_LIST_CACHE, "w") as f:
+        json.dump(data, f)
+    log.info(f"Updated CT log list from {LOG_LIST_URL}")
+    return data
+
 
 def discover_logs():
     if os.path.exists(LOG_LIST_CACHE):
@@ -62,39 +74,30 @@ def discover_logs():
     logs = []
     now = datetime.now(timezone.utc)
 
-    for operator in data["operators"]:
-        for l in operator["logs"]:
+    for operator in data.get("operators", []):
+        for l in operator.get("logs", []):
             state = l.get("state", {})
             if "retired" in state:
                 continue
             if not ("usable" in state or "frozen" in state):
                 continue
 
-            interval = l["temporal_interval"]
-            start = datetime.fromisoformat(interval["start_inclusive"].replace("Z", "+00:00"))
-            end = datetime.fromisoformat(interval["end_exclusive"].replace("Z", "+00:00"))
+            interval = l.get("temporal_interval", {})
+            start = datetime.fromisoformat(interval.get("start_inclusive", "1970-01-01T00:00:00Z").replace("Z", "+00:00"))
+            end = datetime.fromisoformat(interval.get("end_exclusive", "9999-12-31T23:59:59Z").replace("Z", "+00:00"))
             if not (start <= now < end):
                 continue
 
             logs.append({
-                "name": l["description"],
-                "url": l["url"].rstrip("/"),
+                "name": l.get("description", "unknown"),
+                "url": l.get("url", "").rstrip("/"),
                 "state": "usable" if "usable" in state else "frozen",
             })
 
     return logs
 
-
-def fetch_and_cache_log_list():
-    r = requests.get(LOG_LIST_URL, timeout=20)
-    r.raise_for_status()
-    data = r.json()
-    with open(LOG_LIST_CACHE, "w") as f:
-        json.dump(data, f)
-    log.info(f"Updated CT log list from {LOG_LIST_URL}")
-    return data
-
 # ---------------- CT HELPERS ----------------
+
 
 def get_tree_size(log_url):
     r = requests.get(f"{log_url}/ct/v1/get-sth", timeout=10)
@@ -103,9 +106,7 @@ def get_tree_size(log_url):
 
 
 def fetch_entries(log_url, start, end):
-    r = requests.get(
-        f"{log_url}/ct/v1/get-entries?start={start}&end={end}", timeout=30
-    )
+    r = requests.get(f"{log_url}/ct/v1/get-entries?start={start}&end={end}", timeout=30)
     r.raise_for_status()
     return r.json()["entries"]
 
@@ -113,21 +114,14 @@ def fetch_entries(log_url, start, end):
 def parse_cert(leaf_input: bytes):
     try:
         leaf_type = leaf_input[0]
-        if leaf_type not in (0, 1):  # 0 = cert, 1 = precert
-            return None, [], None
-        if leaf_type != 0:  # 0 = timestamped entry, 1 = precert
-            log.debug(f"Skipping non-certificate leaf (type={leaf_type})")
+        if leaf_type != 0:  # only timestamped certificates
             return None, [], None
 
         # skip 12 bytes header (1 type + 8 timestamp + 3 algo)
         offset = 12
-        cert_len = int.from_bytes(leaf_input[offset:offset+3], "big")
-        cert_der = leaf_input[offset+3 : offset+3+cert_len]
-        try:
-            cert = x509.load_der_x509_certificate(cert_der, default_backend())
-        except Exception as e:
-            #log.debug(f"Skipping invalid DER cert: {e}, len={len(cert_der)}")
-            return None, [], None
+        cert_len = int.from_bytes(leaf_input[offset:offset + 3], "big")
+        cert_der = leaf_input[offset + 3: offset + 3 + cert_len]
+        cert = x509.load_der_x509_certificate(cert_der, default_backend())
 
         domains = set()
         for attr in cert.subject:
@@ -152,27 +146,23 @@ def parse_cert(leaf_input: bytes):
 def base_domain(d):
     return psl.get_public_suffix(d)
 
-# ---------------- HORIZONTAL SCALING ----------------
-
-from multiprocessing import Process
-
 # ---------------- WORKER ----------------
 
-def log_worker(lg):
+def log_worker(lg, use_clickhouse=False):
     name = lg["name"].replace(" ", "_")
     offset_file = f"{OFFSET_DIR}/{name}.offset"
 
-    ch = clickhouse_connect.get_client(
-        host=CLICKHOUSE_HOST,
-        port=CLICKHOUSE_PORT,
-        database=CLICKHOUSE_DB,
-        username=os.getenv("CLICKHOUSE_USER", "defaultuser"),
-        password=os.getenv("CLICKHOUSE_PASSWORD", "defaultpassword"),
-    )
+    ch = None
+    if use_clickhouse:
+        ch = clickhouse_connect.get_client(
+            host=CLICKHOUSE_HOST,
+            port=CLICKHOUSE_PORT,
+            database=CLICKHOUSE_DB,
+            username=CLICKHOUSE_USER,
+            password=CLICKHOUSE_PASSWORD,
+        )
 
     log.info(f"Worker started for {name} ({lg['state']})")
-
-    metrics = {"certs": 0, "domains": 0}
 
     while True:
         try:
@@ -190,18 +180,14 @@ def log_worker(lg):
             entries = fetch_entries(lg["url"], idx, end)
             rows = []
 
-            for i, e in enumerate(entries):
+            for e in entries:
                 leaf = base64.b64decode(e["leaf_input"])
                 cert, domains, fp = parse_cert(leaf)
-                if cert is None:
-                    continue
-                if not domains:
-                    log.debug(f"No domains found for cert {fp}")
+                if cert is None or not domains:
                     continue
 
                 for d in domains:
-                    log.info(f"[{name}] {d}")
-                    rows.append([
+                    row = [
                         datetime.utcnow(),
                         d,
                         base_domain(d),
@@ -212,9 +198,11 @@ def log_worker(lg):
                         cert.not_valid_before,
                         cert.not_valid_after,
                         name,
-                    ])
+                    ]
+                    rows.append(row)
+                    print(f"[{name}] {d} -> {base_domain(d)} (expires {cert.not_valid_after})")
 
-            if rows:
+            if rows and use_clickhouse:
                 ch.insert(
                     CLICKHOUSE_TABLE,
                     rows,
@@ -231,29 +219,27 @@ def log_worker(lg):
                         "log_name",
                     ],
                 )
-
-                metrics["domains"] += len(rows)
-                metrics["certs"] += len(set(r[3] for r in rows))
+                #log.info(f"[{name}] Inserted {len(rows)} domains into ClickHouse")
 
             idx = end + 1
-            open(offset_file, "w").write(str(idx))
+            with open(offset_file, "w") as f:
+                f.write(str(idx))
 
         except Exception as e:
             log.error(f"[{name}] error: {e}")
             time.sleep(5)
 
-
 # ---------------- MAIN ----------------
 
-def main():
-    log.info("Starting CT ingestion (horizontal scaling enabled)")
 
+def main():
+    log.info("Starting CT ingestion")
     logs = discover_logs()
     log.info(f"Discovered {len(logs)} CT logs")
 
     procs = []
     for lg in logs:
-        p = Process(target=log_worker, args=(lg,), daemon=True)
+        p = Process(target=log_worker, args=(lg, USE_CLICKHOUSE), daemon=True)
         p.start()
         procs.append(p)
 
