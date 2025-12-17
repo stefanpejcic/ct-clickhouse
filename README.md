@@ -44,7 +44,7 @@ cd ct-clickhouse
 2. Build Docker images:
 
 ```bash
-docker compose build
+docker compose build && docker compose --profile api build
 ```
 
 3. ClickHouse will automatically initialize the database and tables using `clickhouse/init.sql`.
