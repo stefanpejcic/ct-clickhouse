@@ -243,25 +243,31 @@ def size():
 
 
 # /stream
-last_ts = None
-
 @app.route("/stream")
 def stream():
     def event_stream():
-        global last_ts
+        last_ts_local = None
+        client = clickhouse_connect.get_client(
+            host=CLICKHOUSE_HOST,
+            port=CLICKHOUSE_PORT,
+            database=CLICKHOUSE_DB,
+            username=CLICKHOUSE_USER,
+            password=CLICKHOUSE_PASSWORD,
+        )
+
         while True:
             query = "SELECT * FROM cert_domains "
-            if last_ts:
-                query += f"WHERE ts > '{last_ts}' "
+            if last_ts_local:
+                query += f"WHERE ts > '{last_ts_local}' "
             query += "ORDER BY ts ASC LIMIT 100"
 
-            result = ch.query(query)
+            result = client.query(query)
             rows = result.result_rows
 
             if rows:
                 for row in rows:
                     yield f"data: {row}\n\n"
-                last_ts = rows[-1][result.column_names.index("ts")]
+                last_ts_local = rows[-1][result.column_names.index("ts")]
 
             time.sleep(2)
 
