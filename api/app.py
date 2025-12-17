@@ -55,8 +55,8 @@ if RATE_LIMIT_ENABLED:
 ch = clickhouse_connect.get_client(
     host=os.getenv("CLICKHOUSE_HOST", "clickhouse"),
     database=os.getenv("CLICKHOUSE_DB", "ct"),
-    username=os.getenv("CLICKHOUSE_USER", "default"),
-    password=os.getenv("CLICKHOUSE_PASSWORD", "")
+    username=os.getenv("CLICKHOUSE_USER", "defaultuser"),
+    password=os.getenv("CLICKHOUSE_PASSWORD", "defaultpassword")
 )
 
 
