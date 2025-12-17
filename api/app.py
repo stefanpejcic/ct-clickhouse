@@ -22,6 +22,8 @@ app = Flask(__name__)
 IPS_FILE = "ips.txt"
 allowed_ips = None
 
+# ---------------- RESTRICT API ACCESS ----------------
+
 def load_allowed_ips():
     global allowed_ips
     if os.path.exists(IPS_FILE):
@@ -61,6 +63,8 @@ if RATE_LIMIT_ENABLED:
         default_limits=[RATE_LIMIT],
     )
 
+
+# ---------------- CLICKHOUSE ----------------
 ch = clickhouse_connect.get_client(
     host=CLICKHOUSE_HOST,
     port=CLICKHOUSE_PORT,
@@ -70,6 +74,8 @@ ch = clickhouse_connect.get_client(
 )
 
 
+
+# /
 @app.route("/")
 def index():
     endpoints = []
@@ -82,7 +88,7 @@ def index():
             })
     return jsonify(endpoints)
 
-
+# /domain/pejcic.rs
 @app.route("/domain/<name>")
 def domain(name):
     r = ch.query(
@@ -99,6 +105,7 @@ def domain(name):
     decoded_rows = [decode_row(row) for row in r.result_rows]
     return jsonify(decoded_rows)
 
+# /subdomains/pejcic.rs
 @app.route("/subdomains/<base>")
 def subdomains(base):
     r = ch.query(
@@ -109,6 +116,7 @@ def subdomains(base):
     )
     return jsonify(r.result_rows)
 
+# /recent/rs
 @app.route("/recent/<base>")
 def recent(base):
     r = ch.query(
@@ -121,11 +129,9 @@ def recent(base):
     return jsonify(r.result_rows)
 
 
-
 # /tld/rs?limit=500
 @app.route("/tld/<tld>")
 def tld(tld):
-    # Default + max limits
     DEFAULT_LIMIT = 100
     MAX_LIMIT = 1000
 
@@ -161,7 +167,7 @@ def tld(tld):
 
 
 
-
+# /stats
 @app.route("/stats")
 def stats():
     date_str = request.args.get("date")
@@ -204,8 +210,41 @@ def stats():
 
     return jsonify(data)
 
+def human_readable_size(size_bytes):
+    if size_bytes == 0:
+        return "0B"
+    size_name = ("B", "KB", "MB", "GB", "TB", "PB")
+    i = 0
+    while size_bytes >= 1024 and i < len(size_name) - 1:
+        size_bytes /= 1024.0
+        i += 1
+    return f"{size_bytes:.2f}{size_name[i]}"
+
+# /size
+@app.route("/size")
+def size():
+    query = """
+        SELECT
+            sum(bytes_on_disk) AS total_bytes
+        FROM system.parts
+        WHERE database = %(db)s AND table = 'cert_domains'
+    """
+    r = ch.query(query, parameters={"db": CLICKHOUSE_DB})
+
+    if not r.result_rows:
+        return jsonify({"bytes": 0, "human_readable": "0B"})
+
+    total_bytes = r.result_rows[0][0] or 0
+    return jsonify({
+        "bytes": total_bytes,
+        "human_readable": human_readable_size(total_bytes)
+    })
 
 
+
+
+
+# /stream
 last_ts = None
 
 @app.route("/stream")
@@ -232,9 +271,7 @@ def stream():
 
 
 
-
-
-
+# ---------------- MAIN ----------------
 if __name__ == "__main__":
     app.run(host="0.0.0.0", port=5000)
   
