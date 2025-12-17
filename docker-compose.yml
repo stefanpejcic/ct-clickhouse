@@ -3,12 +3,12 @@ services:
     image: clickhouse/clickhouse-server:latest
     container_name: clickhouse
     ports:
-      - "8123:8123"  # HTTP interface
-      - "9000:9000"  # Native TCP interface
+      - "8123:8123"
+      - "9000:9000"
     environment:
-      CLICKHOUSE_USER: defaultuser
-      CLICKHOUSE_PASSWORD: defaultpassword
-      CLICKHOUSE_DB: ct
+      CLICKHOUSE_USER: ${CLICKHOUSE_USER}
+      CLICKHOUSE_PASSWORD: ${CLICKHOUSE_PASSWORD}
+      CLICKHOUSE_DB: ${CLICKHOUSE_DB}
     volumes:
       - ./clickhouse/init.sql:/docker-entrypoint-initdb.d/init.sql
       - /var/lib/clickhouse:/var/lib/clickhouse
@@ -30,10 +30,10 @@ services:
     restart: unless-stopped
     environment:
       USE_CLICKHOUSE: "true"
-      CLICKHOUSE_HOST: clickhouse
-      CLICKHOUSE_USER: defaultuser
-      CLICKHOUSE_PASSWORD: defaultpassword
-      CLICKHOUSE_DB: ct
+      CLICKHOUSE_HOST: ${CLICKHOUSE_HOST}
+      CLICKHOUSE_USER: ${CLICKHOUSE_USER}
+      CLICKHOUSE_PASSWORD: ${CLICKHOUSE_PASSWORD}
+      CLICKHOUSE_DB: ${CLICKHOUSE_DB}
     deploy:
       resources:
         limits:
@@ -43,20 +43,20 @@ services:
   api:
     build: ./api
     container_name: ct_api
-    profiles: ["api"]  # API is off by default and only works if USE_CLICKHOUSE: "true" on ingestion
+    profiles: ["api"]
     environment:
-      CLICKHOUSE_HOST: clickhouse
-      CLICKHOUSE_USER: defaultuser
-      CLICKHOUSE_PASSWORD: defaultpassword
-      CLICKHOUSE_DB: ct
-      RATE_LIMIT_ENABLED: "false"
-      RATE_LIMIT: "100/minute"
+      CLICKHOUSE_HOST: ${CLICKHOUSE_HOST}
+      CLICKHOUSE_USER: ${CLICKHOUSE_USER}
+      CLICKHOUSE_PASSWORD: ${CLICKHOUSE_PASSWORD}
+      CLICKHOUSE_DB: ${CLICKHOUSE_DB}
+      RATE_LIMIT_ENABLED: ${RATE_LIMIT_ENABLED}
+      RATE_LIMIT: ${RATE_LIMIT}
+    volumes:
+      - ./api/ips.txt:/app/ips.txt
     ports:
       - "5000:5000"
     depends_on:
       - clickhouse
-    #volumes: # restrict access to ips, place ips in file and uncomment this
-    #  - ./api/ips.txt:/app/ips.txt
     restart: unless-stopped
     deploy:
       resources:
