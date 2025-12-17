@@ -2,12 +2,12 @@
 
 **Certificate Transparency ingestion platform** with:
 
-* Automatic CT log discovery
+* Automatic CT log discovery (daily)
 * Horizontal scaling (one worker per log)
 * Deduplication and metrics
 * ClickHouse backend for fast querying
 * Optional REST API for domain/subdomain search
-* Optional rate limiting
+* Optional rate and IP limiting
 * Docker Compose deployment with resource limits
 
 ---
@@ -19,8 +19,6 @@
 * Deduplicates certificates by SHA256 fingerprint
 * Stores domain/subdomain data in **ClickHouse** database
 * Optional REST API for easy queries
-* Materialized views for fast “recent subdomains” queries
-* Rate limiting optional via environment variables
 
 ---
 
@@ -135,11 +133,7 @@ GROUP BY domain;
 
 ## Resource Limits
 
-* **ClickHouse**: 1 CPU, 1GB RAM
-* **Ingestion service**: 1 CPU, 1GB RAM
-* **API service**: 1 CPU, 1GB RAM
-
-Configured in `docker-compose.yml` under `deploy.resources.limits`.
+Configured in `.env` file.
 
 ---
 
