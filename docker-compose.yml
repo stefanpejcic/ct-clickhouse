@@ -29,6 +29,7 @@ services:
       - clickhouse
     restart: unless-stopped
     environment:
+      USE_CLICKHOUSE: "true"
       CLICKHOUSE_HOST: clickhouse
       CLICKHOUSE_USER: defaultuser
       CLICKHOUSE_PASSWORD: defaultpassword
@@ -42,7 +43,7 @@ services:
   api:
     build: ./api
     container_name: ct_api
-    profiles: ["api"]  # API is off by default
+    profiles: ["api"]  # API is off by default and only works if USE_CLICKHOUSE: "true" on ingestion
     environment:
       CLICKHOUSE_HOST: clickhouse
       CLICKHOUSE_USER: defaultuser
