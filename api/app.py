@@ -26,14 +26,14 @@ def load_allowed_ips():
     global allowed_ips
     if os.path.exists(IPS_FILE):
         with open(IPS_FILE, "r") as f:
-            allowed_ips = {
+            ips = {
                 line.strip()
                 for line in f
                 if line.strip() and not line.startswith("#")
             }
+        allowed_ips = ips if ips else None
     else:
         allowed_ips = None
-
 
 load_allowed_ips()
 
@@ -46,10 +46,9 @@ def restrict_by_ip():
 
     if client_ip and "," in client_ip:
         client_ip = client_ip.split(",")[0].strip()
-
+    
     if client_ip not in allowed_ips:
         return jsonify({"error": "Access denied"}), 403
-
 
 
 if RATE_LIMIT_ENABLED:
