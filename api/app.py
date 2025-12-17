@@ -56,7 +56,7 @@ ch = clickhouse_connect.get_client(
     host=os.getenv("CLICKHOUSE_HOST", "clickhouse"),
     database=os.getenv("CLICKHOUSE_DB", "ct"),
     username=os.getenv("CLICKHOUSE_USER", "default"),
-    password=os.getenv("CLICKHOUSE_PASSWORD", "mysecretpassword")
+    password=os.getenv("CLICKHOUSE_PASSWORD", "")
 )
 
 
