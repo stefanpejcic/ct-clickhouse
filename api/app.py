@@ -184,8 +184,8 @@ def stats():
     query = f"""
         SELECT
             count() AS total,
-            uniq(domain) AS subdomains,
-            uniq(base_domain) AS domains,
+            uniqCombined(domain) AS subdomains,
+            uniqCombined(base_domain) AS domains,
             min(ts) AS first_seen,
             max(ts) AS last_seen
         FROM cert_domains
