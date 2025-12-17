@@ -19,8 +19,9 @@ services:
     deploy:
       resources:
         limits:
-          cpus: "2"
-          memory: 2g
+          cpus: "${CLICKHOUSE_CPUS:-2}"
+          memory: "${CLICKHOUSE_MEM:-2g}"
+          pids: 3000
 
   ingestion:
     build: ./ingestion
@@ -37,8 +38,9 @@ services:
     deploy:
       resources:
         limits:
-          cpus: "2"
-          memory: 2g
+          cpus: "${INGESTION_CPUS:-2}"
+          memory: "${INGESTION_MEM:-2g}"
+          pids: 1000
 
   api:
     build: ./api
@@ -61,5 +63,6 @@ services:
     deploy:
       resources:
         limits:
-          cpus: "2"
-          memory: 2g
+          cpus: "${API_CPUS:-2}"
+          memory: "${API_MEM:-2g}"
+          pids: 500
