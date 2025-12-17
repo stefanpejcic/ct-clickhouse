@@ -214,6 +214,7 @@ def log_worker(lg):
                     ])
 
             if rows:
+                log.info(f"[{name}] domains in this batch: {[r[1] for r in rows]}")
                 ch.insert(
                     CLICKHOUSE_TABLE,
                     rows,
