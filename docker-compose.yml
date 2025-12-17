@@ -7,7 +7,7 @@ services:
       - "9000:9000"  # Native TCP interface
     environment:
       CLICKHOUSE_USER: default
-      CLICKHOUSE_PASSWORD: mysecretpassword
+      #CLICKHOUSE_PASSWORD: mysecretpassword
       CLICKHOUSE_DB: ct
     volumes:
       - ./clickhouse/init.sql:/docker-entrypoint-initdb.d/init.sql
