@@ -6,8 +6,8 @@ services:
       - "8123:8123"  # HTTP interface
       - "9000:9000"  # Native TCP interface
     environment:
-      CLICKHOUSE_USER: default
-      #CLICKHOUSE_PASSWORD: mysecretpassword
+      CLICKHOUSE_USER: defaultuser
+      CLICKHOUSE_PASSWORD: defaultpassword
       CLICKHOUSE_DB: ct
     volumes:
       - ./clickhouse/init.sql:/docker-entrypoint-initdb.d/init.sql
@@ -30,9 +30,9 @@ services:
     restart: unless-stopped
     environment:
       CLICKHOUSE_HOST: clickhouse
+      CLICKHOUSE_USER: defaultuser
+      CLICKHOUSE_PASSWORD: defaultpassword
       CLICKHOUSE_DB: ct
-      CLICKHOUSE_USER: default
-      CLICKHOUSE_PASSWORD: mysecretpassword
     deploy:
       resources:
         limits:
@@ -45,9 +45,9 @@ services:
     profiles: ["api"]  # API is off by default
     environment:
       CLICKHOUSE_HOST: clickhouse
+      CLICKHOUSE_USER: defaultuser
+      CLICKHOUSE_PASSWORD: defaultpassword
       CLICKHOUSE_DB: ct
-      CLICKHOUSE_USER: default
-      CLICKHOUSE_PASSWORD: mysecretpassword
       RATE_LIMIT_ENABLED: "false"
       RATE_LIMIT: "100/minute"
     ports:
