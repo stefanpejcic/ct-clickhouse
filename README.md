@@ -56,7 +56,7 @@ docker compose build && docker compose --profile api build
 ### 1. Ingestion + ClickHouse (default)
 
 ```bash
-docker compose up
+docker compose up -d
 ```
 
 This starts:
@@ -69,7 +69,7 @@ This starts:
 ### 2. Enable Optional REST API
 
 ```bash
-docker compose --profile api up
+docker compose --profile api up -d
 ```
 
 * API exposed at: `http://localhost:5000`
