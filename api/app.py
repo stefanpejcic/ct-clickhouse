@@ -132,15 +132,13 @@ def recent(base):
 # /tld/rs?limit=500
 @app.route("/tld/<tld>")
 def tld(tld):
-    DEFAULT_LIMIT = 100
-    MAX_LIMIT = 1000
 
     try:
-        limit = int(request.args.get("limit", DEFAULT_LIMIT))
+        limit = int(request.args.get("limit", 100))
     except ValueError:
-        limit = DEFAULT_LIMIT
+        limit = 100
 
-    limit = max(1, min(limit, MAX_LIMIT))
+    limit = max(1, min(limit, 1000))
 
     tld = tld.lower().lstrip(".")
     pattern = f"%.{tld}"
