@@ -108,7 +108,7 @@ def parse_cert(leaf_input: bytes):
         try:
             cert = x509.load_der_x509_certificate(cert_der, default_backend())
         except Exception as e:
-            log.debug(f"Skipping invalid DER cert: {e}, len={len(cert_der)}")
+            #log.debug(f"Skipping invalid DER cert: {e}, len={len(cert_der)}")
             return None, [], None
 
         domains = set()
