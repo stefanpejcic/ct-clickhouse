@@ -19,7 +19,6 @@ from cryptography.hazmat.backends import default_backend
 from publicsuffix2 import PublicSuffixList
 
 # ---------------- CONFIG ----------------
-
 LOG_LIST_URL = "https://www.gstatic.com/ct/log_list/v3/log_list.json"
 POLL_INTERVAL = 5
 BATCH_SIZE = 512
@@ -29,9 +28,7 @@ CLICKHOUSE_HOST = "clickhouse"
 CLICKHOUSE_PORT = 8123
 CLICKHOUSE_DB = "ct"
 CLICKHOUSE_TABLE = "cert_domains"
-
 VERBOSE = True
-
 # ---------------------------------------
 
 os.makedirs(OFFSET_DIR, exist_ok=True)
@@ -44,7 +41,6 @@ logging.basicConfig(
 log = logging.getLogger("ct")
 
 # ---------------- DISCOVERY ----------------
-
 def discover_logs():
     r = requests.get(LOG_LIST_URL, timeout=20)
     r.raise_for_status()
@@ -93,7 +89,6 @@ def fetch_entries(log_url, start, end):
 
 def parse_cert(leaf_input: bytes):
     try:
-        # Leaf type (first byte)
         leaf_type = leaf_input[0]
         if leaf_type not in (0, 1):  # 0 = cert, 1 = precert
             return None, [], None
@@ -101,7 +96,7 @@ def parse_cert(leaf_input: bytes):
             log.debug(f"Skipping non-certificate leaf (type={leaf_type})")
             return None, [], None
 
-        # TimestampedEntry structure: skip 12 bytes header (1 type + 8 timestamp + 3 algo)
+        # skip 12 bytes header (1 type + 8 timestamp + 3 algo)
         offset = 12
         cert_len = int.from_bytes(leaf_input[offset:offset+3], "big")
         cert_der = leaf_input[offset+3 : offset+3+cert_len]
@@ -134,8 +129,7 @@ def parse_cert(leaf_input: bytes):
 def base_domain(d):
     return psl.get_public_suffix(d)
 
-# ---------------- HORIZONTAL SCALING MODEL ----------------
-# One process per CT log using multiprocessing
+# ---------------- HORIZONTAL SCALING ----------------
 
 from multiprocessing import Process
 
@@ -227,7 +221,6 @@ def log_worker(lg):
 
 
 # ---------------- MAIN ----------------
-
 def main():
     log.info("Starting CT ingestion (horizontal scaling enabled)")
 
