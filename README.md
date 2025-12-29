@@ -92,6 +92,73 @@ RATE_LIMIT_ENABLED=true RATE_LIMIT=60/minute docker compose --profile api up
 
 ---
 
+## API Endpoints
+
+This API provides access to domain-related data, including subdomains, recent activity, top-level domains (TLDs), statistics, and streaming updates. All endpoints support `HEAD`, `OPTIONS`, and `GET` HTTP methods.
+
+### 1. **Index**
+
+* **URL:** `/`
+* **Methods:** `HEAD`, `OPTIONS`, `GET`
+* **Description:** Provides basic information about the API or confirms service availability.
+
+### 2. **Domain**
+
+* **URL:** `/domain/<name>`
+* **Methods:** `HEAD`, `OPTIONS`, `GET`
+* **Description:** Retrieve information about a specific domain.
+* **Parameters:**
+
+  * `name` (string, required): The domain name to query.
+
+### 3. **Subdomains**
+
+* **URL:** `/subdomains/<base>`
+* **Methods:** `HEAD`, `OPTIONS`, `GET`
+* **Description:** Fetch all known subdomains for a given base domain.
+* **Parameters:**
+
+  * `base` (string, required): The base domain to search for subdomains.
+
+### 4. **Recent**
+
+* **URL:** `/recent/<base>`
+* **Methods:** `HEAD`, `OPTIONS`, `GET`
+* **Description:** List recently discovered subdomains or related activity for a base domain.
+* **Parameters:**
+
+  * `base` (string, required): The base domain to query recent activity for.
+
+### 5. **TLD**
+
+* **URL:** `/tld/<tld>`
+* **Methods:** `HEAD`, `OPTIONS`, `GET`
+* **Description:** Fetch information about a specific top-level domain (TLD).
+* **Parameters:**
+
+  * `tld` (string, required): The top-level domain (e.g., `com`, `org`) to query.
+
+### 6. **Stats**
+
+* **URL:** `/stats`
+* **Methods:** `HEAD`, `OPTIONS`, `GET`
+* **Description:** Retrieve overall statistics from the API, such as the number of domains, subdomains, or other relevant metrics.
+
+
+### 7. **Size**
+
+* **URL:** `/size`
+* **Methods:** `HEAD`, `OPTIONS`, `GET`
+* **Description:** Returns the current size or count of records in the database.
+
+### 8. **Stream**
+
+* **URL:** `/stream`
+* **Methods:** `HEAD`, `OPTIONS`, `GET`
+* **Description:** Provides a real-time stream of domain-related events or updates.
+
+---
+
 ## ClickHouse Queries
 
 ### Total records
