@@ -41,6 +41,11 @@ services:
           cpus: "${INGESTION_CPUS:-2}"
           memory: "${INGESTION_MEM:-2g}"
           pids: 1000
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "50m"
+        max-file: "3"
 
   api:
     build: ./api
@@ -66,3 +71,8 @@ services:
           cpus: "${API_CPUS:-2}"
           memory: "${API_MEM:-2g}"
           pids: 500
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "20m"
+        max-file: "2"
